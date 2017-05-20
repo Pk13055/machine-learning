@@ -11,7 +11,7 @@ The directory structure is as follows:
 \  + Other misc C++ and C language code
 \
 \
-\__+ Scripts
+\__+ [Scripts](https://github.com/Pk13055/machine-learning/blob/master/Scripts/RUN.md)
    \
    + Normalization.py
    \	- This file takes a dataset and applies feature scaling and mean normalization
