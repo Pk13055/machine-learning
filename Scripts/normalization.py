@@ -28,11 +28,11 @@ def sanitize(unset_data):
 def process(unset_data):
 	m = len(unset_data)
 	n = len(sanitize(unset_data[0].split(' '))) - 1
-	feature_sets = [ [] for _ in range(n) ]
+	feature_sets = [ [] for _ in range(n + 1) ]
 	yi = []
 	for _ in range(m):
 		unset_data[_] = unset_data[_].split(' ')
-		for i in range(n):
+		for i in range(n + 1):
 			feature_sets[i].append(unset_data[_][i])
 		yi.append(unset_data[_][-1])
 	return tuple([feature_sets, yi])
@@ -61,7 +61,7 @@ def reconstruct(normalized_set, yi_s):
 		data_example = []
 		for j in range(col):
 			data_example.append(normalized_set[j][i])
-		data_example.append(yi_s[i])
+		# data_example.append(yi_s[i])
 		normalized_data.append(data_example)
 	print(normalized_data)
 	return normalized_data
