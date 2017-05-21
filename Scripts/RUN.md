@@ -20,3 +20,18 @@
 	- output_data_set: This is the file to which to write the normalized data (_by default writes to normalized_data.txt file_)
 
 ## Gradient-Descent
+
+- To generate the params and other features, run the following:
+	- ` ./grad-descent.py <learning rate > < dataset file > <  normalize_data file > < timeout* >`
+	- Example set : 
+		- ` ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt ` => normalized
+	 	- `./grad-descent.py 0.0000000769 dataset2.txt ` => unormalized 
+- The parameters for this command are:
+	- *learning rate*: The learning rate for your gradient descent algorithm.
+	- *dataset file*: The dataset for which your algorithm will run.
+	- *normalized data*: The normalized datset (_optional_) which helps in quicker convergance.
+	- *timeout*: This will kill long processess. _(entered in seconds)_
+- Following the command, you will run into the possible scenarios:
+	- Program crunches for a while following which you get a prompt: This is the success case, you can query for cases
+	- Program runs into a [nan, nan, ...] print cycle: This means your learning rate is far too large. Use a smaller learning rate and, if possible, use normalized data
+	- Program proceeds with [float, float ..] value printing: Program is crunching, give it time
