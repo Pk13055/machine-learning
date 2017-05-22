@@ -14,11 +14,14 @@ file_name = sys.argv[1]
 n = int(sys.argv[2])
 m = int(sys.argv[3])
 
+# calculates the regression params for the given run
 theta = [randint(- 10 ** 6, 10 ** 6) for i in range(n + 1)]
 
+# to calculate yi on the basis of the thetas and xi
 def h(xi_s):
 	return sum([i * j for i, j in zip(xi_s, theta)])
 
+# ties everything together
 def main():
 	if os.path.exists(file_name):
 		os.remove(file_name)
@@ -31,5 +34,6 @@ def main():
 		fout.write(str(h(xi_s)) + " \n")
 		fout.close()
 
+# enables script access
 if __name__ == '__main__':
 	main()

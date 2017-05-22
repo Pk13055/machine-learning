@@ -3,7 +3,9 @@
 ## Dataset generation
 
 - To generate the dataset all you need to do is run the ` data_set.py ` file
-- ` ./data_set.py < #features > < #records > < output file > < threshold* > `
+	- ` ./better_data_set.py < output_file > < features > < records >`
+	- ` ./data_set.py < #features > < #records > < output file > < threshold* > `
+
 - The varous parts of the command:
 	- features: This parameter is compulsory and is for the number of features you want in your regression model
 		If you choose this parameter as 3 this will include features ` x0 ( = 1), x1, x2, x3 ` followed by the yi
@@ -26,7 +28,7 @@
 	- Example set : 
 		- ` ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt ` => normalized
 	 	- `./grad-descent.py 0.0000000769 dataset2.txt ` => unormalized 
-	 	- `./ grad-descent.py 1.1 big_data.txt big_data_normal.txt ` => normalized big dataset _(this is a *75 feature*, *1000 example* dataset)_
+	 	- `./ grad-descent.py 1.1 big_data.txt big_data_normal.txt 3000` => normalized big dataset _(this is a *75 feature*, *1000 example* dataset)_
 - The parameters for this command are:
 	- *learning rate*: The learning rate for your gradient descent algorithm.
 	- *dataset file*: The dataset for which your algorithm will run.

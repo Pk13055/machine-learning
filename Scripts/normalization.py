@@ -8,6 +8,7 @@
 
 import sys
 from statistics import stdev, mean
+
 # Data should be of the form 
 # feature 1 feature 2 feature 3 ... feature n + 1 cost
 try:
@@ -20,9 +21,11 @@ try:
 except:
 	out_file = "normalized_data.txt"
 
+
 # this function removes any oddities in the data set
 def sanitize(unset_data):
 	return type(unset_data)(filter(lambda x: x != '', unset_data))
+
 
 # this function extracts the feature-set from the data so that it can be normalized
 def process(unset_data):
@@ -66,6 +69,8 @@ def reconstruct(normalized_set, yi_s):
 	# print(normalized_data)
 	return normalized_data
 
+
+# write the normalized data to the file
 def file_write(filename, dataset):
 	header = dataset[1]
 	dataset = dataset[0]
@@ -102,10 +107,12 @@ def normalize():
 	return x
 
 
+# main function for script access
 def main():
 	x = normalize()
-	# print(x)
 	return x
 
+
+# enables script access
 if __name__ == '__main__':
 	main()

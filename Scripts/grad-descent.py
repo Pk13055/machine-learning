@@ -9,30 +9,7 @@ import sys
 
 '''
 
-# class gradientDescent:
-# 	def __init__(self, learning_rate = 0.001, features = 1, data_set):
-# 		self.learning_rate = learning_rate
-# 		self.n = features
-# 		self.m = data_set
-# 		# this is the x0 feature which is equal to 1 to model the thetas
-# 		self.x0 = 1
-# 		self.theta = []
-		
-# 	def __repr__(self):
-# 		return "Learning Rate : %f \n N : %d \n M : %d \n  Parameters : " \
-# 		% (self.learning_rate, self.n, self.m) + str(self.theta)
-	
-# 	def _h(*args):
-# 		sum_var = 0
-# 		for _ in range(self.m):
-# 			sum_var += self.theta[_] * args[_]
-# 		return sum_var
-	
-
-# 	def query(*args):
-# 		return _h(args)
-
-
+# this function is to separate out the stats and the data in case of normalized data
 def process_data(data_file, normal_file):
 	# this is the object that will be returned
 	# in case of normalized data, the statistics portion will contain information to 
@@ -121,7 +98,7 @@ def gradDesc(data_set, learning_rate, n, m, timeout = 30, tolerance = 0.000001):
 	return theta
 
 
-# this is the  functionality that parses the various params required for gradient descent 
+# this is functionality that packages the various params required for gradient descent 
 def calc_params(learning_rate, data_set, timeout = 30):
 	normal = len(data_set['statistics']) != 0 # bool to check if data is normalized or not
 	stats = data_set['statistics']
@@ -141,7 +118,7 @@ def calc_params(learning_rate, data_set, timeout = 30):
 		return_obj['statistics'] = stats
 	return return_obj
 
-# to normalize the input data if it isn't
+# to normalize the input data if required
 def make_normal(xi_s, stats):
 	if len(xi_s) == len(stats) - 1:
 		return [ (i - j[0]) / j[-1] for i, j in zip(xi_s, stats)]
@@ -149,13 +126,13 @@ def make_normal(xi_s, stats):
 		return None
 
 
-# once the thetas have been made you can query them as follows
+# once query result and normalize xi_s if required
 def query_y(theta, n, stats = []):
 	
 	stats = [tuple([stats[i], stats[i + 1]]) for i in range(0, len(stats), 2)]
 	
 	# this is for taking input from the user
-	print("Enter the xi", end = " : ")
+	print("Enter the xi(s)", end = " : ")
 	xi_s = list(map(float, list(filter( lambda x: x != '', input().strip(' ').split(' ')))))[: n]
 
 	# use next three lines for checking the accuracy of the program
@@ -163,8 +140,6 @@ def query_y(theta, n, stats = []):
 	# ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt => normalized
 	# ./grad-descent.py 0.0000000769 dataset2.txt => unormalized 
 
-	# big check here will be to check if the data is normalized and 
-	# the query data needs to be done the same or not
 	xi_s.insert(0,1)
 	if len(stats):
 		xi_s = make_normal(xi_s, stats)
@@ -175,7 +150,7 @@ def query_y(theta, n, stats = []):
 	print(value)
 	return value
 
-
+# main program to tie everything together
 def main():
 	try:
 		learning_rate = float(sys.argv[1])
@@ -194,10 +169,12 @@ def main():
 			learning_rate, features, data_set, normalized_data = tuple(input().strip(' ').split(' '))
 		except:
 			normalized_data = ""
-	# grad_obj = gradientDescent(float(learning_rate), data_set, normalized_data)
+
 	data_set = process_data(data_set, normalized_data)
 	params = calc_params(learning_rate, data_set, timeout)
+
 	answer = True
+
 	while answer:
 		query_y(params['parameters'], params['n'], params['statistics'])
 		print("Calculate another (Y/n) : ", end = "")
@@ -205,9 +182,7 @@ def main():
 		answer = False
 		if ans == "" or ans[0] == "" or ans[0] == "y":
 			answer = True
-	# print(params)
 
-
-
+# enables script access
 if __name__ == '__main__':
 	main()

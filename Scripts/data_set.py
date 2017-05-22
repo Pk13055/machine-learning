@@ -49,6 +49,7 @@ def create_features(n):
 		features.append(random.randint(ranges[_][0], ranges[_][1]))
 	return features
 
+# main function which ties everything together
 def main():
 	for _ in range(m):
 		yi = random.randint(threshold, 10 ** 9)
@@ -62,5 +63,7 @@ def main():
 		fin.close()
 	return data_set
 
+
+# enables script access
 if __name__ == '__main__':
 	main()
