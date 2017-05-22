@@ -26,6 +26,7 @@
 	- Example set : 
 		- ` ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt ` => normalized
 	 	- `./grad-descent.py 0.0000000769 dataset2.txt ` => unormalized 
+	 	- `./ grad-descent.py 1.1 big_data.txt big_data_normal.txt ` => normalized big dataset _(this is a *75 feature*, *1000 example* dataset)_
 - The parameters for this command are:
 	- *learning rate*: The learning rate for your gradient descent algorithm.
 	- *dataset file*: The dataset for which your algorithm will run.
