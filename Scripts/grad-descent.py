@@ -65,17 +65,24 @@ def close_enough(current_theta, old_theta, tolerance = 0.001):
 
 # this calculates the value of h_theta(x) as t0 + x1 * t1 + ... xn * tn
 def h(thetas, xi_s):
-	return sum([i * j for i, j in zip(thetas, xi_s)])
+	from math import nan
+	try:
+		return sum([i * j for i, j in zip(thetas, xi_s)])
+	except TypeError:
+		return nan
 
 # this is the core functionality that calculates the various theta values
 def gradDesc(data_set, learning_rate, n, m, timeout = 30, tolerance = 0.000001):
 	# imports for the function
-	from math import isnan
+	from math import isnan, isinf
 	import datetime
 
 	# return theta for the current run
 	theta = [ 0 for _ in range(n)]
-	
+	iter_count = 1
+	# divergence_test = []
+	# div_count = 5
+
 	# master break for long processes
 	break_button = datetime.datetime.now()
 
@@ -85,10 +92,18 @@ def gradDesc(data_set, learning_rate, n, m, timeout = 30, tolerance = 0.000001):
 			partial_sum = sum([ (h(theta, i[:-1]) - i[-1]) * i[_] for i in data_set])
 			new_theta = theta[_] - (learning_rate / m) * partial_sum
 			current_theta[_] = new_theta
-		print(current_theta)
+		print(iter_count, current_theta)
+		iter_count += 1
 		
-		# check for inf 
-		if True in list(map(lambda x: isnan(x), theta)):
+		# check for divergence
+		
+		# divergence_test.append(all([ i > j for i, j in zip(current_theta, theta)]))
+		# if len(divergence_test) > div_count:
+		# 	divergence_test = divergence_test[-div_count :]
+		# print(divergence_test)
+		# if  all(divergence_test[-div_count:]) or \
+		if	all(list(map(lambda x: x > 10 ** 9, [abs(i - j) for i, j in zip(theta, current_theta)]))) or \
+		    all(list(map(lambda x: isnan(x) or isinf(x), theta))):
 			print("THETA(S) HAS/HAVE DIVERGED", "RESULTS WILL BE INCORRECT", sep = "\n")
 			break
 
@@ -173,6 +188,7 @@ def main():
 				timeout = 30
 		except:
 			normalized_data = "normal_data.txt"
+			timeout = 30
 	except:
 		try:
 			learning_rate, features, data_set, normalized_data = tuple(input().strip(' ').split(' '))

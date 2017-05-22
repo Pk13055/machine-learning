@@ -63,7 +63,7 @@ def reconstruct(normalized_set, yi_s):
 			data_example.append(normalized_set[j][i])
 		# data_example.append(yi_s[i])
 		normalized_data.append(data_example)
-	print(normalized_data)
+	# print(normalized_data)
 	return normalized_data
 
 def file_write(filename, dataset):
