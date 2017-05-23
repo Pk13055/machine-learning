@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/home/pratik/anaconda3/bin/python3.6
 
 import sys
 
@@ -48,54 +48,123 @@ def h(thetas, xi_s):
 	except TypeError:
 		return nan
 
+# this calculate the cost J(theta) for the given theta values
+# good convergence test
+def J(thetas, data):
+	from math import nan
+	m = len(data)
+	xi_s = [x[:-1] for x in data]
+	yi_s = [x[-1] for x in data]
+	try:
+		return 1 / (2 * m) * sum([(h(thetas, xi_s[_]) - yi_s[_]) ** 2 for _ in range(m)])
+	except OverflowError:
+		return nan
+
+
+
 # this is the core functionality that calculates the various theta values
-def gradDesc(data_set, learning_rate, n, m, timeout = 30, tolerance = 0.000001):
+def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001):
 	# imports for the function
+	from time import sleep
 	from math import isnan, isinf
+	from statistics import mean
 	import datetime
+	
+	yi_s = [float(x[-1]) for x in data_set]
+	ans = True
+	learning_rate = og_learning
+	rates_history =[ learning_rate ]
+	theta_history =[]
+	run_count = 0
+	
+	while ans:
+		# return theta for the current run
+		theta = [ 0 for _ in range(n)]
+		old_J = J(theta, data_set)
+		# cost_history = [tuple([0, old_J])]
+		cost_history = []
+		iter_count = 1
+		check_flag = True
+		# master break for long processes
+		break_button = datetime.datetime.now()
+		run_count += 1
 
-	# return theta for the current run
-	theta = [ 0 for _ in range(n)]
-	iter_count = 1
-	# divergence_test = []
-	# div_count = 5
+		while True:
+			current_theta = [ 0 for _ in range(n) ]
+			for _ in range(n):
+				partial_sum = sum([ (h(theta, i[:-1]) - i[-1]) * i[_] for i in data_set])
+				new_theta = theta[_] - (learning_rate / m) * partial_sum
+				current_theta[_] = new_theta
+			
+			current_J = J(current_theta, data_set)
+			print(str(run_count) + ":" + str(iter_count), " LR(α): ", learning_rate," J(θ): ", current_J, "\nθ: ", current_theta, "\n")
+			iter_count += 1
+			old_rate = learning_rate
+			
+			# check for divergence
+			if current_J > old_J:
+				# (decrease learning rate)
+				
+				learning_rate /= 10
+				print("THETA(S) HAS/HAVE DIVERGED", "RESULTS MAY BE INCORRECT", sep = "\n")
+				check_flag = False
+				break
+			
+			if iter_count > 10000:
+				learning_rate *= 10
+				check_flag = False
+				break
+			
+			old_J = current_J
+			cost_history.append(tuple([iter_count - 1, old_J]))
 
-	# master break for long processes
-	break_button = datetime.datetime.now()
+			# # divergence_test.append(all([ i > j for i, j in zip(current_theta, theta)]))
+			# # if  all(divergence_test[-div_count:]) or \
+			# if	all(list(map(lambda x: x > 10 ** 9, [abs(i - j) for i, j in zip(theta, current_theta)]))) or \
+			#     all(list(map(lambda x: isnan(x) or isinf(x), theta))):
+			# 	print("THETA(S) HAS/HAVE DIVERGED", "RESULTS WILL BE INCORRECT", sep = "\n")
+			# 	break
 
-	while True:
-		current_theta = [ 0 for _ in range(n) ]
-		for _ in range(n):
-			partial_sum = sum([ (h(theta, i[:-1]) - i[-1]) * i[_] for i in data_set])
-			new_theta = theta[_] - (learning_rate / m) * partial_sum
-			current_theta[_] = new_theta
-		print(iter_count, current_theta)
-		iter_count += 1
-		
-		# check for divergence
-		
-		# divergence_test.append(all([ i > j for i, j in zip(current_theta, theta)]))
-		# if len(divergence_test) > div_count:
-		# 	divergence_test = divergence_test[-div_count :]
-		# print(divergence_test)
-		# if  all(divergence_test[-div_count:]) or \
-		if	all(list(map(lambda x: x > 10 ** 9, [abs(i - j) for i, j in zip(theta, current_theta)]))) or \
-		    all(list(map(lambda x: isnan(x) or isinf(x), theta))):
-			print("THETA(S) HAS/HAVE DIVERGED", "RESULTS WILL BE INCORRECT", sep = "\n")
-			break
+			# check for convergence
+			if close_enough(current_theta, theta, tolerance):
+				# (increase learning rate)
+				rates_history.append(old_rate)
+				theta_history.append(current_theta)
+				learning_rate *= 3
+				theta = current_theta
+				break
 
-		# check for convergence
-		if close_enough(current_theta, theta, tolerance):
+			# check for time exceed  (increase learning rate)
+			if (datetime.datetime.now() - break_button).seconds > timeout:
+				print("TIME EXCEEDED, FLUSHING NOW", "RESULTS MAY BE INCORRECT", sep = "\n")
+				check_flag = False
+				break
+			
 			theta = current_theta
-			break
-
-		# check for time exceed
-		if (datetime.datetime.now() - break_button).seconds > timeout:
-			print("TIME EXCEEDED, FLUSHING NOW", "RESULTS WILL BE INCORRECT", sep = "\n")
-			break
 		
-		theta = current_theta
-	return theta
+		if not check_flag:
+			cost_history = []
+		
+		print("* Learning Rate (α):", old_rate) 
+		
+		ans = not (old_rate >= max(rates_history) and run_count > 5 and check_flag and run_count < 1000)
+		if ans:
+			print("* Proposed Learning Rate (α):", learning_rate)
+
+		# user input to continue below, uncomment if required
+		# print("Try new learning_rate (Y/n) : ", end = "")
+		# ans = str(input())
+		# if ans == "" or ans == "y" or ans == "yes":
+		# 	ans = True
+		# else:
+		# 	ans = False
+
+		sleep(1)
+	
+	if not check_flag:
+		theta = theta_history[rates_history.index(max(rates_history))]
+
+	return theta, cost_history
 
 
 # this is functionality that packages the various params required for gradient descent 
@@ -107,13 +176,17 @@ def calc_params(learning_rate, data_set, timeout = 30):
 	n = len(learning_set[0]) - 1 # the number of features (including x0) ==> n - 1 actual features
 	m = len(learning_set) # the number of data entries 
 	return_obj = {
-		'parameters' : [],
+		'parameters' : {
+			'thetas' : [],
+			'cost_history' : []
+		},
 		'statistics' : [],
 		'learning_rate' : learning_rate,
 		'n' : n,
 		'm' : m,
 	}
-	return_obj['parameters'] = gradDesc(learning_set, learning_rate, n, m, timeout)
+	return_obj['parameters']['thetas'], return_obj['parameters']['cost_history'] \
+	= gradDesc(learning_set, learning_rate, n, m, timeout)
 	if normal:
 		return_obj['statistics'] = stats
 	return return_obj
@@ -134,13 +207,8 @@ def query_y(theta, n, stats = []):
 	# this is for taking input from the user
 	print("Enter the xi(s)", end = " : ")
 	xi_s = list(map(float, list(filter( lambda x: x != '', input().strip(' ').split(' ')))))[: n]
-
-	# use next three lines for checking the accuracy of the program
-	# xi_s = [1234]
-	# ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt => normalized
-	# ./grad-descent.py 0.0000000769 dataset2.txt => unormalized 
-
 	xi_s.insert(0,1)
+
 	if len(stats):
 		xi_s = make_normal(xi_s, stats)
 	value = h(theta, xi_s)
@@ -149,6 +217,24 @@ def query_y(theta, n, stats = []):
 		value = (value * stats[-1][-1]) + stats[-1][0]
 	print(value)
 	return value
+
+# this plots the cost function
+def plot(jvalues, iter_counts, thetas):
+	if len(jvalues):
+		import matplotlib.pyplot as plt
+		# if len(thetas) == 2:
+		# 	from mpl_toolkits.mplot3d import Axes3D
+		# 	fig = plt.figure()
+		# 	ax = fig.gca(projection='3d')
+		# 	ax.plot_trisurf([x[0] for x in thetas], y, z, linewidth = 0.2, antialiased = True)
+
+		# else:
+		plt.plot(iter_counts, jvalues, 'b-')
+		plt.axis([min(iter_counts), max(iter_counts), min(jvalues), max(jvalues)])
+		plt.axis('normal')
+		plt.ylabel('J(θ) -> ')
+		plt.xlabel('Iterations ->')
+		plt.show()
 
 # main program to tie everything together
 def main():
@@ -172,11 +258,12 @@ def main():
 
 	data_set = process_data(data_set, normalized_data)
 	params = calc_params(learning_rate, data_set, timeout)
-
+	cost_h = params['parameters']['cost_history']
+	plot([x[-1] for x in cost_h], [x[0] for x in cost_h], params['parameters']['thetas'])
+	
 	answer = True
-
 	while answer:
-		query_y(params['parameters'], params['n'], params['statistics'])
+		query_y(params['parameters']['thetas'], params['n'], params['statistics'])
 		print("Calculate another (Y/n) : ", end = "")
 		ans = str(input())
 		answer = False

@@ -26,7 +26,7 @@
 - To generate the params and other features, run the following:
 	- ` ./grad-descent.py <learning rate > < dataset file > <  normalize_data file > < timeout* >`
 	- Example set : 
-		- ` ./grad-descent.py 0.0099999 dataset2.txt dataset2_normal.txt ` => normalized
+		- ` ./grad-descent.py 1.9682999999999997 dataset2.txt dataset2_normal.txt ` => normalized
 	 	- `./grad-descent.py 0.0000000769 dataset2.txt ` => unormalized 
 	 	- `./ grad-descent.py 1.1 big_data.txt big_data_normal.txt 3000` => normalized big dataset _(this is a *75 feature*, *1000 example* dataset)_
 - The parameters for this command are:
