@@ -1,7 +1,7 @@
 #!/home/pratik/anaconda3/bin/python3.6
 
 import sys
-
+import config
 '''
 
 	This program predicts data on the basis of an input set and determines the best learning rate and 
@@ -37,7 +37,7 @@ def process_data(data_file, normal_file):
 	return return_obj
 
 # checks for convergence of values
-def close_enough(current_theta, old_theta, tolerance = 0.001):
+def close_enough(current_theta, old_theta, tolerance):
 	return all([ abs(i - j) < tolerance for i, j in zip(current_theta, old_theta)])
 
 # this calculates the value of h_theta(x) as t0 + x1 * t1 + ... xn * tn
@@ -63,7 +63,7 @@ def J(thetas, data):
 
 
 # this is the core functionality that calculates the various theta values
-def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001):
+def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 	# imports for the function
 	from time import sleep
 	from math import isnan, isinf
@@ -105,13 +105,13 @@ def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001
 			if current_J > old_J:
 				# (decrease learning rate)
 				
-				learning_rate /= 10
+				learning_rate /= config.J_divergence_factor
 				print("THETA(S) HAS/HAVE DIVERGED", "RESULTS MAY BE INCORRECT", sep = "\n")
 				check_flag = False
 				break
 			
-			if iter_count > 10000:
-				learning_rate *= 10
+			if iter_count > config.max_iterations:
+				learning_rate *= config.iter_overflow_factor
 				check_flag = False
 				break
 			
@@ -147,7 +147,9 @@ def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001
 		
 		print("* Learning Rate (α):", old_rate) 
 		
-		ans = not (old_rate >= max(rates_history) and run_count > 5 and check_flag and run_count < 1000)
+		ans = not (old_rate >= max(rates_history) and \
+			run_count > config.min_run_count and \
+			check_flag and run_count < config.max_run_count)
 		if ans:
 			print("* Proposed Learning Rate (α):", learning_rate)
 
@@ -159,7 +161,7 @@ def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001
 		# else:
 		# 	ans = False
 
-		sleep(1)
+		sleep(config.pause_theta)
 	
 	if not check_flag:
 		theta = theta_history[rates_history.index(max(rates_history))]
@@ -168,7 +170,7 @@ def gradDesc(data_set, og_learning = 1, n, m, timeout = 30, tolerance = 0.000001
 
 
 # this is functionality that packages the various params required for gradient descent 
-def calc_params(learning_rate, data_set, timeout = 30):
+def calc_params(learning_rate, data_set, timeout):
 	normal = len(data_set['statistics']) != 0 # bool to check if data is normalized or not
 	stats = data_set['statistics']
 	learning_set = data_set['data_set'] # dataset that we will work with 
@@ -186,7 +188,7 @@ def calc_params(learning_rate, data_set, timeout = 30):
 		'm' : m,
 	}
 	return_obj['parameters']['thetas'], return_obj['parameters']['cost_history'] \
-	= gradDesc(learning_set, learning_rate, n, m, timeout)
+	= gradDesc(learning_set, learning_rate, n, m, timeout, config.tolerance)
 	if normal:
 		return_obj['statistics'] = stats
 	return return_obj
@@ -246,10 +248,10 @@ def main():
 			try:
 				timeout = float(sys.argv[4])
 			except:
-				timeout = 30
+				timeout = config.timeout
 		except:
-			normalized_data = "normal_data.txt"
-			timeout = 30
+			normalized_data = config.default_normal_filename
+			timeout = config.timeout
 	except:
 		try:
 			learning_rate, features, data_set, normalized_data = tuple(input().strip(' ').split(' '))

@@ -96,6 +96,8 @@ def normalize():
 		_ = list(map(int, _))
 		u_i = int(mean(_))
 		dev = int(stdev(_))
+		if not dev:
+			dev = 1
 		retrieve_data.append(tuple([u_i, dev]))
 		_ = list(map(lambda x: (x - u_i) / dev, _))
 		normalized_set.append(_)
