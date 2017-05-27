@@ -2,6 +2,7 @@
 
 import sys
 import config
+
 '''
 
 	This program predicts data on the basis of an input set and determines the best learning rate and 
@@ -41,29 +42,48 @@ def close_enough(current_theta, old_theta, tolerance):
 	return all([ abs(i - j) < tolerance for i, j in zip(current_theta, old_theta)])
 
 # this calculates the value of h_theta(x) as t0 + x1 * t1 + ... xn * tn
-def h(thetas, xi_s):
-	from math import nan
+def h(thetas, xi_s, is_class = False):
+	from math import nan, e
 	try:
-		return sum([i * j for i, j in zip(thetas, xi_s)])
+		p_sum = sum([i * j for i, j in zip(thetas, xi_s)])
 	except TypeError:
 		return nan
+	if is_class:
+		try:
+			return 1 / (1 + e ** -p_sum)
+		except OverflowError:
+			return 1
+	else:
+		return p_sum
+
+def logu(x):
+	from math import log
+	if x <= 0:
+		return config.max_cost
+	else: return log(x)
 
 # this calculate the cost J(theta) for the given theta values
 # good convergence test
-def J(thetas, data):
+def J(thetas, data, is_class, regular_param):
 	from math import nan
 	m = len(data)
 	xi_s = [x[:-1] for x in data]
 	yi_s = [x[-1] for x in data]
+	regular_cost = regular_param / (2 * m) * sum(list(map(lambda x: x ** 2, thetas)))
 	try:
-		return 1 / (2 * m) * sum([(h(thetas, xi_s[_]) - yi_s[_]) ** 2 for _ in range(m)])
+		if is_class:
+			p_sum = sum([-yi_s[_] * logu(h(thetas, xi_s[_], is_class)) \
+				-(1 - yi_s[_]) * logu(1 - h(thetas, xi_s[_], is_class)) for _ in range(m)])
+			return 1 / m * p_sum + regular_cost
+		else:
+			return 1 / (2 * m) * sum([(h(thetas, xi_s[_]) - yi_s[_]) ** 2 for _ in range(m)]) + regular_cost
 	except OverflowError:
 		return nan
 
 
 
 # this is the core functionality that calculates the various theta values
-def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
+def gradDesc(data_set, og_learning, n, m, timeout, tolerance, regular_param):
 	# imports for the function
 	from time import sleep
 	from math import isnan, isinf
@@ -71,16 +91,23 @@ def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 	import datetime
 	
 	yi_s = [float(x[-1]) for x in data_set]
+	is_class = all(list(map(lambda x: True if x in [0.0, 1.0, 1, 0] else False, yi_s)))
 	ans = True
 	learning_rate = og_learning
-	rates_history =[ learning_rate ]
+	rates_history =[]
 	theta_history =[]
 	run_count = 0
-	
-	while ans:
+	if is_class:
+		max_run = config.class_run_count
+		max_iter = config.class_iter_count
+	else:
+		max_run = config.max_run_count
+		max_iter = config.max_iterations
+
+	while ans and run_count < max_run:
 		# return theta for the current run
 		theta = [ 0 for _ in range(n)]
-		old_J = J(theta, data_set)
+		old_J = J(theta, data_set, is_class, regular_param)
 		# cost_history = [tuple([0, old_J])]
 		cost_history = []
 		iter_count = 1
@@ -92,25 +119,32 @@ def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 		while True:
 			current_theta = [ 0 for _ in range(n) ]
 			for _ in range(n):
-				partial_sum = sum([ (h(theta, i[:-1]) - i[-1]) * i[_] for i in data_set])
-				new_theta = theta[_] - (learning_rate / m) * partial_sum
+				partial_sum = sum([ (h(theta, i[:-1], is_class) - i[-1]) * i[_] for i in data_set])
+				new_theta = theta[_] * (1 - regular_param / m) - (learning_rate / m) * partial_sum
 				current_theta[_] = new_theta
 			
-			current_J = J(current_theta, data_set)
-			print(str(run_count) + ":" + str(iter_count), " LR(α): ", learning_rate," J(θ): ", current_J, "\nθ: ", current_theta, "\n")
+			current_J = J(current_theta, data_set, is_class, regular_param)
+			print(str(run_count) + ":" + str(iter_count), \
+				" LR(α): ", learning_rate,end = " ")
+			if regular_param:
+				print("RR(λ): ", regular_param, end = "")
+			print(" J(θ): ", current_J, "\nθ: ", current_theta, "\n")
 			iter_count += 1
 			old_rate = learning_rate
 			
 			# check for divergence
 			if current_J > old_J:
 				# (decrease learning rate)
-				
 				learning_rate /= config.J_divergence_factor
 				print("THETA(S) HAS/HAVE DIVERGED", "RESULTS MAY BE INCORRECT", sep = "\n")
 				check_flag = False
 				break
-			
-			if iter_count > config.max_iterations:
+			elif (old_J - current_J) / old_J < config.dyn_alpha_tolerance:
+				rates_history.append(old_rate)
+				theta_history.append(current_theta)
+				learning_rate *= config.dyn_alpha_factor
+
+			if iter_count > max_iter:
 				learning_rate *= config.iter_overflow_factor
 				check_flag = False
 				break
@@ -126,17 +160,18 @@ def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 			# 	break
 
 			# check for convergence
-			if close_enough(current_theta, theta, tolerance):
+			if close_enough(current_theta, theta, tolerance) or current_J < config.min_J_cost:
 				# (increase learning rate)
 				rates_history.append(old_rate)
 				theta_history.append(current_theta)
-				learning_rate *= 3
+				learning_rate *= config.better_theta_factor
 				theta = current_theta
 				break
 
 			# check for time exceed  (increase learning rate)
 			if (datetime.datetime.now() - break_button).seconds > timeout:
 				print("TIME EXCEEDED, FLUSHING NOW", "RESULTS MAY BE INCORRECT", sep = "\n")
+				learning_rate *= config.time_exceed_factor
 				check_flag = False
 				break
 			
@@ -146,10 +181,12 @@ def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 			cost_history = []
 		
 		print("* Learning Rate (α):", old_rate) 
-		
-		ans = not (old_rate >= max(rates_history) and \
-			run_count > config.min_run_count and \
-			check_flag and run_count < config.max_run_count)
+		if check_flag or len(rates_history):
+			ans = not (old_rate >= max(rates_history) and \
+					run_count > config.min_run_count \
+					and run_count < max_run)
+		else:
+			ans = True
 		if ans:
 			print("* Proposed Learning Rate (α):", learning_rate)
 
@@ -166,11 +203,11 @@ def gradDesc(data_set, og_learning, n, m, timeout, tolerance):
 	if not check_flag:
 		theta = theta_history[rates_history.index(max(rates_history))]
 
-	return theta, cost_history
+	return theta, cost_history, is_class
 
 
 # this is functionality that packages the various params required for gradient descent 
-def calc_params(learning_rate, data_set, timeout):
+def calc_params(learning_rate, data_set, timeout, regular_param):
 	normal = len(data_set['statistics']) != 0 # bool to check if data is normalized or not
 	stats = data_set['statistics']
 	learning_set = data_set['data_set'] # dataset that we will work with 
@@ -184,11 +221,13 @@ def calc_params(learning_rate, data_set, timeout):
 		},
 		'statistics' : [],
 		'learning_rate' : learning_rate,
+		'regularization_param' : regular_param,
 		'n' : n,
 		'm' : m,
+		'is_class' : False
 	}
-	return_obj['parameters']['thetas'], return_obj['parameters']['cost_history'] \
-	= gradDesc(learning_set, learning_rate, n, m, timeout, config.tolerance)
+	return_obj['parameters']['thetas'], return_obj['parameters']['cost_history'], return_obj['is_class'] \
+	= gradDesc(learning_set, learning_rate, n, m, timeout, config.tolerance, regular_param)
 	if normal:
 		return_obj['statistics'] = stats
 	return return_obj
@@ -202,7 +241,7 @@ def make_normal(xi_s, stats):
 
 
 # once query result and normalize xi_s if required
-def query_y(theta, n, stats = []):
+def query_y(theta, n, stats = [], is_class = False):
 	
 	stats = [tuple([stats[i], stats[i + 1]]) for i in range(0, len(stats), 2)]
 	
@@ -213,10 +252,12 @@ def query_y(theta, n, stats = []):
 
 	if len(stats):
 		xi_s = make_normal(xi_s, stats)
-	value = h(theta, xi_s)
+	value = h(theta, xi_s, is_class)
 	if len(stats):
 		print("<USING NORMALIZED DATA>", end = " ")
 		value = (value * stats[-1][-1]) + stats[-1][0]
+	if is_class:
+		print("<P(Y=1|X;θ)>", end = ' ')
 	print(value)
 	return value
 
@@ -236,6 +277,7 @@ def plot(jvalues, iter_counts, thetas):
 		plt.axis('normal')
 		plt.ylabel('J(θ) -> ')
 		plt.xlabel('Iterations ->')
+		# plt.title('Cost over time')
 		plt.show()
 
 # main program to tie everything together
@@ -246,7 +288,11 @@ def main():
 		try:
 			normalized_data = sys.argv[3]
 			try:
-				timeout = float(sys.argv[4])
+				regular_param = float(sys.argv[4])
+			except:
+				regular_param = config.regularization_param
+			try:
+				timeout = float(sys.argv[5])
 			except:
 				timeout = config.timeout
 		except:
@@ -259,13 +305,13 @@ def main():
 			normalized_data = ""
 
 	data_set = process_data(data_set, normalized_data)
-	params = calc_params(learning_rate, data_set, timeout)
+	params = calc_params(learning_rate, data_set, timeout, regular_param)
 	cost_h = params['parameters']['cost_history']
 	plot([x[-1] for x in cost_h], [x[0] for x in cost_h], params['parameters']['thetas'])
 	
 	answer = True
 	while answer:
-		query_y(params['parameters']['thetas'], params['n'], params['statistics'])
+		query_y(params['parameters']['thetas'], params['n'], params['statistics'], params['is_class'])
 		print("Calculate another (Y/n) : ", end = "")
 		ans = str(input())
 		answer = False
