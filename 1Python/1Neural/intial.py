@@ -3,6 +3,9 @@
 '''
 	This is an implementation of a fixed neural network using backpropogation 
 	(It calculates the xor of variables using one output node and two hidden layers)
+	This script utilizes a lot of print statments so that the output of the network can be easily
+	piped to a text document for later referral on it's working. 
+	Output is tried to be made as graphical without being graphical 
 
 '''
 
@@ -40,7 +43,7 @@ def FP(x, thetas, example_no = []):
 	activation_history.append(x)
 	count_layer = 1
 	for i in thetas[1:]:
-		print("L", count_layer, " -> ", "L", count_layer + 1, sep = '')
+		print("<====== L", count_layer, " -> ", "L", count_layer + 1, " =====>", sep = '')
 		print("Theta set : ", i)
 		temp_ans = []
 		# iterating through the 
@@ -62,17 +65,57 @@ def FP(x, thetas, example_no = []):
 		x = temp_ans
 		activation_history.append(x)
 		count_layer += 1
-	
+		print("<================>")
+
+	print("****** Final Remarks ******")
 	print("Neural O/P : ", activation_history[-1][1:])
 	print("y(", example_no, ") : ", yi_s)
 
-	return activation_history
+	return activation_history, [i - j for i, j in zip(activation_history[-1][1:], yi_s)]
 
 
 # for delta calculation per training set example
-def BP(x, thetas):
-	pass
+def BP(delta_L, thetas, nodes_pe, L = 0):
+	# nodes_per = list(map(lambda x: x + 1, nodes_per))
+	nodes_per = [0] + nodes_pe
+	if L == 0:
+		L = len(thetas)
 
+	master_delta = []
+	# conciliating all the deltas
+	next_delta = delta_L
+	next_delta.insert(0, 0)
+	master_delta.append(next_delta)
+
+	for l in range(L - 1, 1, -1):
+		print("<====== L", l, " <- ", "L", l + 1, " =====>", sep = '')
+		current_delta = []
+		current_nodes = nodes_per[l] 
+		next_nodes = nodes_per[l + 1] 
+		
+		for j in range(1, current_nodes + 1):
+			print("Delta(", l, ",", j, ") :", end = "")
+			p_sum = 0
+			for i in range(1, next_nodes + 1):
+				p_sum += next_delta[i] * thetas[l][i][j]
+			current_delta.append(p_sum)
+			print(current_delta[-1])
+		
+		next_delta = current_delta
+		next_delta.insert(0, 0)
+		master_delta.append(next_delta)
+		
+
+		print("Delta(", l, ") : ", master_delta[-1])
+		print("<================>")
+
+	# removing the offset zeroes (optional)
+	# master_delta = [ x[1:] for x in master_delta]
+	
+	# reversing and adding offset for labeling
+	master_delta = [[], []] + master_delta[::-1]
+	
+	return master_delta
 
 def main():
 	# number of hidden layers
@@ -100,17 +143,33 @@ def main():
 	nodes_per.append(k)
 	nodes_per.insert(0, len(dataset[0][0])) # the number of inputs
 	thetas = make_theta(nodes_per)
-
+	
+	master_history = []
+	master_delta = []
+	
+	# iterate through training set
 	count_example = 1
 	for t_ex in dataset:
-		print("Training ex", count_example)
-		history = FP(t_ex, thetas, count_example)
-		print("x", count_example, "Activation matrix : ", history)
-		BP(t_ex, thetas)
-		
+		print("+------ EXAMPLE ", count_example, "----------+")
+		print("**** FORWARD PROPOGATION ****")
+		history, delta_L = FP(t_ex, thetas, count_example)
+		master_history.append(history)
+		print("E", count_example, " activation matrix : ", master_history[-1], sep = "")
+		print("********************************")
+		print("**** BACKWARD PROPOGATION ****")
+		print("NODES", nodes_per)
+		delta_history = BP(delta_L, thetas, nodes_per, L)
+		master_delta.append(delta_history)
+		print("E", count_example, " Delta Matrix : ", delta_history, sep = "")
+		print("+---------------------------------+")
 		count_example += 1
-		print("Press ENTER to continue... ", end = "")
-		input()
+
+		# print("Press ENTER to continue... ", end = "")
+		# input()
+
+	print("+----- ACTIVATION HISTORY ------+", master_history, "+-------------------------------+", sep = "\n")
+	print("+----- DELTA HISTORY ------+", master_delta, "+-------------------------------+", sep = "\n")
+
 
 if __name__ == '__main__':
 	print("Neural Network dynamic implementation (v1.3)")
