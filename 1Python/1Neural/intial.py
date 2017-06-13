@@ -6,47 +6,72 @@
 
 '''
 
-# imports 
+# default imports 
 import config
+import helper
+
+# specific imports
 import sys
+# from time import sleep
 
+# function for making the theta matrix based on the network config
+def make_theta(nodes_per):
+	nodes_per = list(map(lambda x: x + 1, nodes_per))
+	thetas =[helper.matrix(i, j) for i, j in zip(nodes_per[1:], nodes_per)]
+	thetas.insert(0, []) # offsetting the thetas so as to keep with labeling
+	return thetas
 
+# propogate one training example through the network 
+# with the giving set of theta values
+# basically passes through all the layers ===> equiv to one run of the forward alg.
+def FP(x, thetas, example_no = []):
+	print("x(", example_no, ") :", x[0])
+	activation_history = []
 
-# this function is to separate out the stats and the data in case of normalized data
-def process_data(data_file, normal_file, k):
-	# this is the object that will be returned
-	# in case of normalized data, the statistics portion will contain information to 
-	# get back data from the normalized set
-	return_obj = {
-		'statistics' : [],
-		'data_set' : [],
-		'm' : 0
-	}
-
-	# always tries to parse the normalized data first
-	try:
-		normal_set = open(normal_file).read().strip(' ').strip('\n').split('\n')
-		normal_set = list(map(lambda x: x.strip(' ').split(' '), normal_set))
-		normal_set = [list(map(float, x)) for x in normal_set]
-		return_obj['statistics'] = normal_set[0]
-		return_obj['data_set'] = normal_set[1:]
+	# offsetting the history to keep in norm with the labeling
+	activation_history.append([])
 	
-	# parse usual data
-	except IOError:
-		data_set = open(data_file).read().strip(' ').strip('\n').split('\n')
-		data_set = list(map(lambda x: x.strip(' ').split(' '), data_set))
-		data_set = [list(map(float, x)) for x in data_set]
-		return_obj['data_set'] = data_set
-	except:
-		return_obj['statistics'].append(-1)
+	# adding inital bias unit
+	x[0].insert(0, 1)
 
-	return_obj['m'] = len(return_obj['data_set'])
-	
-	# seperate out the k-dimensional output vector and the inputs for the m-set training array
-	return_obj['data_set'] = [ [ _[:-k], _[-k:]] for _ in return_obj['data_set'] ]
-	
-	return return_obj['m'], return_obj['data_set'], return_obj['statistics']
+	# inital seperating
+	yi_s = x[-1]
+	x = x[0]
+	activation_history.append(x)
+	count_layer = 1
+	for i in thetas[1:]:
+		print("L", count_layer, " -> ", "L", count_layer + 1, sep = '')
+		print("Theta set : ", i)
+		temp_ans = []
+		# iterating through the 
+		count_node = 0
+		for j in i:
+			# skip bias unit calculation (effective speed up)
+			if not count_node:
+				count_node += 1
+				continue
+			print("Node", count_node)
+			# adding activation unit 
+			temp_ans.append(helper.h(j, x))
+			print("Thetas : ", j)
+			print("a(", count_layer + 1, ",", count_node, ") -> ", temp_ans[-1], sep = "")
+			count_node += 1
 
+		# adding the bias unit for the next run
+		temp_ans.insert(0, 1)
+		x = temp_ans
+		activation_history.append(x)
+		count_layer += 1
+	
+	print("Neural O/P : ", activation_history[-1][1:])
+	print("y(", example_no, ") : ", yi_s)
+
+	return activation_history
+
+
+# for delta calculation per training set example
+def BP(x, thetas):
+	pass
 
 
 def main():
@@ -64,19 +89,29 @@ def main():
 		normal_file = config.normal_file
 
 	# the number of nodes per layers excluding the biasing unit
+	# this will be used to build the theta array 
 	nodes_per = []
-	
 
 	for _ in range(2, hidden + 2):
 		print("Nodes in layer", _, end = " : ")
 		nodes_per.append(int(input()))
+	
+	m, dataset, statistics = helper.process_data(data_file, normal_file, k)
 	nodes_per.append(k)
-
-	m, dataset, statistics = process_data(data_file, normal_file, k)
 	nodes_per.insert(0, len(dataset[0][0])) # the number of inputs
-	print(nodes_per)
-	pass
+	thetas = make_theta(nodes_per)
+
+	count_example = 1
+	for t_ex in dataset:
+		print("Training ex", count_example)
+		history = FP(t_ex, thetas, count_example)
+		print("x", count_example, "Activation matrix : ", history)
+		BP(t_ex, thetas)
+		
+		count_example += 1
+		print("Press ENTER to continue... ", end = "")
+		input()
 
 if __name__ == '__main__':
-	print("Neural Network small scale fixed implementation (v1.0)")
+	print("Neural Network dynamic implementation (v1.3)")
 	main()
