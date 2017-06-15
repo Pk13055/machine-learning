@@ -15,12 +15,16 @@ import helper
 
 # specific imports
 import sys
+import operator
 # from time import sleep
 
 # function for making the theta matrix based on the network config
-def make_theta(nodes_per):
+def make_theta(nodes_per, val = None):
 	nodes_per = list(map(lambda x: x + 1, nodes_per))
-	thetas =[helper.matrix(i, j) for i, j in zip(nodes_per[1:], nodes_per)]
+	if val is not None:
+		thetas =[helper.matrix(i, j, val) for i, j in zip(nodes_per[1:], nodes_per)]
+	else:
+		thetas =[helper.matrix(i, j) for i, j in zip(nodes_per[1:], nodes_per)]
 	thetas.insert(0, []) # offsetting the thetas so as to keep with labeling
 	return thetas
 
@@ -75,7 +79,7 @@ def FP(x, thetas, example_no = []):
 
 
 # for delta calculation per training set example
-def BP(delta_L, thetas, nodes_pe, L = 0):
+def BP(delta_L, thetas, nodes_pe, activation_history, L = 0):
 	# nodes_per = list(map(lambda x: x + 1, nodes_per))
 	nodes_per = [0] + nodes_pe
 	if L == 0:
@@ -98,6 +102,10 @@ def BP(delta_L, thetas, nodes_pe, L = 0):
 			p_sum = 0
 			for i in range(1, next_nodes + 1):
 				p_sum += next_delta[i] * thetas[l][i][j]
+			
+			# element wise multiply of the theta' * x(i) .* a(l) * (1 - a(l))
+			p_sum *= (activation_history[l][j] * (1 - activation_history[l][j]))
+			
 			current_delta.append(p_sum)
 			print(current_delta[-1])
 		
@@ -117,17 +125,123 @@ def BP(delta_L, thetas, nodes_pe, L = 0):
 	
 	return master_delta
 
+# this function accumilates the error across the training set
+# returning the Capital Delta matrix 
+def accumilate(CDel, activation_history, delta_history, m = 0):
+	if m == 0:
+		m = len(activation_history)
+	
+	# empty matrix
+	CDelta = CDel
+	theta_set = len(CDelta)
+	
+	for i in range(1, m + 1):
+		cur_CDelta = CDel
+		for l in range(1, theta_set):
+			mat_build_row, mat_build_col = delta_history[i][l + 1], activation_history[i][l]
+			cur_CDelta[l] = [ list(map(lambda x: x * i, mat_build_col)) for i in mat_build_row ]
+		CDelta = helper.list_recur(CDelta, cur_CDelta)
+	return CDelta
+
+# this regularizes the delta matrix and returns the partial derivatives of each param
+def make_partial(m, thetas, CDeltas, lambd = 0):
+	# defines an "operator" to perform multiplication and division
+	# mul = helper.Infix(lambda x,y: list(map(lambda j: j * x, y)))
+	
+	ad_term = helper.nest_operate(lambd, thetas, operator.mul)
+	# in case regularization required
+	if lambd:
+		ad_term = [ [[j if i else 0 for i, j in enumerate(k)] for k in l] for l in ad_term[1:]] \
+		# change the regular term according to theta_0 nomenclature
+		ad_term.insert(0, []) # add offset for proper labeling
+	
+	CDeltas = helper.nest_operate((1 / m), CDeltas, operator.mul)
+
+	# partial derivative matrix 
+	D_Matrix = helper.list_recur(CDeltas, ad_term)
+	return D_Matrix
+
+
+def learn_theta(learning_rate, lambd, m, nodes_per, base_thetas):
+	thetas = base_thetas
+	theta_history = [ thetas ]	
+	while True:
+		print("CURRENT : ", thetas, sep = "\n")
+		master_history = [] # activation history run for the given theta
+		master_delta = [] # error history for the given theta
+
+		# iterate through training set
+		count_example = 1
+		for t_ex in dataset:
+			print("+------ EXAMPLE ", count_example, "----------+")
+			print("**** FORWARD PROPOGATION ****")
+
+			# forward propogate to get the activation values as well as final delta_L
+			history, delta_L = FP(t_ex, thetas, count_example)
+			master_history.append(history)
+			
+			print("E", count_example, " activation matrix : ", master_history[-1], sep = "")
+			
+			print("********************************")
+			print("**** BACKWARD PROPOGATION ****")
+			print("NODES", nodes_per)
+			
+			# back propogate to get the delta matrix for all the examples and append to master_delta matrix
+			delta_history = BP(delta_L, thetas, nodes_per, history, L)
+			master_delta.append(delta_history)
+			print("E", count_example, " Delta Matrix : ", delta_history, sep = "")
+			print("+---------------------------------+")
+			count_example += 1
+
+		# offsetting the history to match labeling
+		master_history.insert(0, [])
+		master_delta.insert(0, [])
+
+		# print("+----- ACTIVATION HISTORY ------+", master_history,\
+		# "+-------------------------------+", sep = "\n")
+		# print("+----- DELTA HISTORY ------+", master_delta, \
+		# "+-------------------------------+", sep = "\n")
+		
+		# delta accumilator matrix
+		CDelta = accumilate(make_theta(nodes_per, 0), master_history, master_delta, m)
+		# print("C_DEL AFTER RUN", CDelta, sep = "\n")
+		
+		# partial derivative matrix wrt induvidual theta
+		partial_D = make_partial(m, thetas, CDelta, lambd)
+		# print("PARTIAL", partial_D, sep = " : ")
+		
+		partial_D = helper.nest_operate(-learning_rate, partial_D, operator.mul)
+		
+		new_theta = list_recur(thetas, partial_D, operator.sub)
+		thetas = new_theta
+		theta_history.append(thetas)
+
+	# finally return learnt thetas
+	return thetas
+
+
 def main():
-	# number of hidden layers
-	hidden = int(sys.argv[1])
-	L = hidden + 2 # L is the total no of layers
-	data_file = sys.argv[2] #dataset filename
 	try:
-		k = int(sys.argv[3]) # no of output nodes, ie, nodes in the Lth layers
+		learning_rate = float(sys.argv[1])
+	except:
+		learning_rate = config.learning_rate
+	# number of hidden layers
+	hidden = int(sys.argv[2])
+	L = hidden + 2 # L is the total no of layers
+	data_file = sys.argv[3] #dataset filename
+	
+	# regularization parameter
+	try:
+		lambd = float(sys.argv[4])
+	except:
+		lambd = config.lambd
+	# layers
+	try:
+		k = int(sys.argv[5]) # no of output nodes, ie, nodes in the Lth layers
 	except:
 		k = config.k
 	try:
-		normal_file = sys.argv[4] # normalized datset name
+		normal_file = sys.argv[6] # normalized datset name
 	except:
 		normal_file = config.normal_file
 
@@ -142,35 +256,12 @@ def main():
 	m, dataset, statistics = helper.process_data(data_file, normal_file, k)
 	nodes_per.append(k)
 	nodes_per.insert(0, len(dataset[0][0])) # the number of inputs
-	thetas = make_theta(nodes_per)
+	base_thetas = make_theta(nodes_per)
 	
-	master_history = []
-	master_delta = []
+	final_theta = learn_theta(learning_rate, lambd, m, nodes_per, base_thetas)
 	
-	# iterate through training set
-	count_example = 1
-	for t_ex in dataset:
-		print("+------ EXAMPLE ", count_example, "----------+")
-		print("**** FORWARD PROPOGATION ****")
-		history, delta_L = FP(t_ex, thetas, count_example)
-		master_history.append(history)
-		print("E", count_example, " activation matrix : ", master_history[-1], sep = "")
-		print("********************************")
-		print("**** BACKWARD PROPOGATION ****")
-		print("NODES", nodes_per)
-		delta_history = BP(delta_L, thetas, nodes_per, L)
-		master_delta.append(delta_history)
-		print("E", count_example, " Delta Matrix : ", delta_history, sep = "")
-		print("+---------------------------------+")
-		count_example += 1
-
-		# print("Press ENTER to continue... ", end = "")
-		# input()
-
-	print("+----- ACTIVATION HISTORY ------+", master_history, "+-------------------------------+", sep = "\n")
-	print("+----- DELTA HISTORY ------+", master_delta, "+-------------------------------+", sep = "\n")
 
 
 if __name__ == '__main__':
-	print("Neural Network dynamic implementation (v1.3)")
+	print("Neural Network dynamic implementation (v1.5)")
 	main()

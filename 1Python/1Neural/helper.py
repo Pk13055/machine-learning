@@ -3,8 +3,9 @@
 	This file contains all the utilitarian functions
 
 '''
+import operator
 
-# sanitize list, tuple etc on the basis on a given value
+# sanitize list, tuple etc on the basis on l10 given value
 def sanitize(data, value = ''):
 	return type(data)(filter(lambda x: x != value, data))
 
@@ -13,8 +14,8 @@ def sanitize(data, value = ''):
 def matrix(m, n, x = []):
 	if x == []:
 		from random import random as r
-		return [[r() for _ in range(n)] for i in range(m)]
-	return [[x for _ in range(n)] for i in range(m)]
+		return [[0 for x in range(n)] if i == 0 else [r() for _ in range(n)] for i in range(m)]
+	return [[0 for x in range(n)] if i == 0 else [x for _ in range(n)] for i in range(m)]
 
 # flatten the theta list for easy summation of squares
 def flatten(S):
@@ -23,6 +24,26 @@ def flatten(S):
     if isinstance(S[0], list):
         return flatten(S[0]) + flatten(S[1:])
     return S[:1] + flatten(S[1:])
+
+# this function adds recursively nested lists element-wise
+def list_recur(l1, l2, op = operator.add):
+	if not l1:
+		return []
+	elif isinstance(l1[0], list):
+		l10, l20, l1, l2 = l1[0], l2[0], l1[1:], l2[1:]
+		return [list_recur(l10, l20, op)] + list_recur(l1,l2, op)
+	else:
+		return [op(l1[0], l2[0])] + list_recur(l1[1:], l2[1:], op)
+
+# this function elementwise operators
+def nest_operate(a, l, op = operator.add):
+	if not l:
+		return []
+	elif isinstance(l[0], list):
+		return [nest_operate(a, l[0], op)] + nest_operate(a, l[1:], op)
+	else:
+		return [op(a, l[0])] + nest_operate(a, l[1:], op)
+
 
 # this function is to separate out the stats and the data in case of normalized data
 def process_data(data_file, normal_file, k):
@@ -65,3 +86,18 @@ def h(thetas, xi_s):
 	from math import e
 	p_sum = sum([i * j for i, j in zip(thetas, xi_s)])
 	return 1 / (1 + e ** -p_sum)
+
+# defined for making own operators
+class Infix:
+    def __init__(self, function):
+        self.function = function
+    def __ror__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __or__(self, other):
+        return self.function(other)
+    def __rlshift__(self, other):
+        return Infix(lambda x, self=self, other=other: self.function(other, x))
+    def __rshift__(self, other):
+        return self.function(other)
+    def __call__(self, value1, value2):
+        return self.function(value1, value2)
