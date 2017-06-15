@@ -19,7 +19,7 @@ def matrix(m, n, x = []):
 
 # flatten the theta list for easy summation of squares
 def flatten(S):
-    if empty(S):
+    if S == []:
         return S
     if isinstance(S[0], list):
         return flatten(S[0]) + flatten(S[1:])
@@ -28,12 +28,19 @@ def flatten(S):
 # this function adds recursively nested lists element-wise
 def list_recur(l1, l2, op = operator.add):
 	if not l1:
-		return []
-	elif isinstance(l1[0], list):
-		l10, l20, l1, l2 = l1[0], l2[0], l1[1:], l2[1:]
-		return [list_recur(l10, l20, op)] + list_recur(l1,l2, op)
+		return type(l1)([])
+	elif isinstance(l1[0], type(l1)):
+		return type(l1)([list_recur(l1[0], l2[0], op)]) + list_recur(l1[1:],l2[1:], op)
 	else:
-		return [op(l1[0], l2[0])] + list_recur(l1[1:], l2[1:], op)
+		return type(l1)([op(l1[0], l2[0])]) + list_recur(l1[1:], l2[1:], op)
+
+# checks for closeness, convergence of theta values
+def close_enough(new_theta, old_theta, tolerance = 0.000001):
+	return all(flatten(list_recur(new_theta, old_theta, lambda x, y : abs(x - y) < tolerance)))
+
+# this function checks for divergence of J(theta)
+def check_divergence(new_D, old_D):
+	return any(flatten(list_recur(new_D, old_D, lambda x, y : x < y)))
 
 # this function elementwise operators
 def nest_operate(a, l, op = operator.add):
