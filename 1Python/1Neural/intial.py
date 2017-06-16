@@ -16,6 +16,7 @@ import helper
 # specific imports
 import sys
 import operator
+from copy import deepcopy
 # from time import sleep
 
 # function for making the theta matrix based on the network config
@@ -32,13 +33,11 @@ def make_theta(nodes_per, val = None):
 # with the giving set of theta values
 # basically passes through all the layers ===> equiv to one run of the forward alg.
 def FP(x1, thetas, example_no = [], singleton = False):
-	x = x1
-	# print("x(", example_no, ") :", x[0])
-	activation_history = []
-	# offsetting the history to keep in norm with the labeling
-	activation_history.append([])
+	x = deepcopy(x1)
 	
-
+	# offsetting the history to keep in norm with the labeling
+	activation_history = [[]]
+	
 	# adding inital bias unit
 	if singleton:
 		x.insert(0, 1)
@@ -53,8 +52,6 @@ def FP(x1, thetas, example_no = [], singleton = False):
 	activation_history.append(x)
 	count_layer = 1
 	for i in thetas[1:]:
-		# print("<====== L", count_layer, " -> ", "L", count_layer + 1, " =====>", sep = '')
-		# print("Theta set : ", i)
 		temp_ans = []
 		# iterating through the 
 		count_node = 0
@@ -63,11 +60,8 @@ def FP(x1, thetas, example_no = [], singleton = False):
 			if not count_node:
 				count_node += 1
 				continue
-			# print("Node", count_node)
 			# adding activation unit 
 			temp_ans.append(helper.h(j, x))
-			# print("Thetas : ", j)
-			# print("a(", count_layer + 1, ",", count_node, ") -> ", temp_ans[-1], sep = "")
 			count_node += 1
 
 		# adding the bias unit for the next run
@@ -75,11 +69,7 @@ def FP(x1, thetas, example_no = [], singleton = False):
 		x = temp_ans
 		activation_history.append(x)
 		count_layer += 1
-		# print("<================>")
 
-	# print("****** Final Remarks ******")
-	# print("Neural O/P : ", activation_history[-1][1:])
-	# print("y(", example_no, ") : ", yi_s)
 	if singleton:
 		return activation_history[-1][1:]
 	return activation_history, [i - j for i, j in zip(activation_history[-1][1:], yi_s)]
@@ -88,13 +78,13 @@ def FP(x1, thetas, example_no = [], singleton = False):
 # for delta calculation per training set example
 def BP(delta_L, thetas, nodes_pe, activation_history, L = 0):
 	# nodes_per = list(map(lambda x: x + 1, nodes_per))
-	nodes_per = [0] + nodes_pe
+	nodes_per = [0] + deepcopy(nodes_pe)
 	if L == 0:
 		L = len(thetas)
 
 	master_delta = []
 	# conciliating all the deltas
-	next_delta = delta_L
+	next_delta = deepcopy(delta_L)
 	next_delta.insert(0, 0)
 	master_delta.append(next_delta)
 
@@ -139,7 +129,7 @@ def accumilate(CDel, activation_history, delta_history, m = 0):
 		m = len(activation_history)
 	
 	# empty matrix
-	CDelta = CDel
+	CDelta = deepcopy(CDel)
 	theta_set = len(CDelta)
 	
 	for i in range(1, m + 1):
@@ -148,7 +138,7 @@ def accumilate(CDel, activation_history, delta_history, m = 0):
 			mat_build_row, mat_build_col = delta_history[i][l + 1], activation_history[i][l]
 			cur_CDelta[l] = [ list(map(lambda x: x * i, mat_build_col)) for i in mat_build_row ]
 		CDelta = helper.list_recur(CDelta, cur_CDelta)
-		print(CDelta)
+		# print(CDelta)
 	return CDelta
 
 # this regularizes the delta matrix and returns the partial derivatives of each param
@@ -167,11 +157,54 @@ def make_partial(m, thetas, CDeltas, lambd = 0):
 	D_Matrix = helper.list_recur(ad_term, CDeltas)
 	return D_Matrix
 
+# for a given dataset, calculates 
+# - 1 / m sig(1..m) sig(1..k) y(k)log(h_theta)_k +  (1 - y(k))log(1 + (h_theta)_k)
+def J(thetas, dataset):
 
+	from math import log
+	total_cost = 0
+	for i in dataset:
+		yi_s = i[-1]
+		opVec, delta_L = FP(i, thetas)
+		h_thetas = opVec[-1][1:]
+
+		# y_k * log(h_theta)_k
+		term1 = helper.list_recur(yi_s, \
+			helper.nest_operate(1, h_thetas, lambda x, y: log(y)), operator.mul)
+		# (1 - y_k) * log(1 - (h_theta)_k)
+		term2 = helper.list_recur(helper.nest_operate(1, yi_s, operator.sub), \
+			helper.nest_operate(1, helper.nest_operate(1, h_thetas, operator.sub), lambda x, y: log(y)))
+		current_cost = helper.list_recur(term1, term2)[0]
+		total_cost += current_cost
+	
+	total_cost *= (- 1 / len(dataset))
+	return total_cost
+
+# this function checks whether the predicted gradients are what they should be
+# by comparing with estimates
+def gradient_check(thetas, dataset, partial_D, epsilon = config.epsilon, tolerance = config.tolerance):
+	is_close = False
+	apx_PD = deepcopy(partial_D)
+	for l in range(1, len(thetas)):
+		for i in range(1, len(thetas[l])):
+			for j in range(1, len(thetas[l][i])):
+				temp_theta = [deepcopy(thetas), deepcopy(thetas)]
+				temp_theta[0][l][i][j] -= epsilon
+				temp_theta[1][l][i][j] += epsilon
+				slope =  (J(temp_theta[1], dataset) - J(temp_theta[0], dataset)) / (2 * epsilon)
+				apx_PD[l][i][j] = slope
+
+	ans_matrix = helper.list_recur(apx_PD, partial_D, lambda x, y: abs(x - y) < tolerance)
+	print(helper.flatten(ans_matrix))
+	is_close = all(helper.flatten(ans_matrix))
+	return is_close
+
+
+# this function ties everything together and calculates the required theta for the given network
 def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
-	thetas = base_thetas
+	thetas = deepcopy(base_thetas)
 	theta_history = [ thetas ]
-	CDelta_history = []	
+	J_history = [J(base_thetas, dataset)]	
 	
 	print("Inita Theta (θ) : ", thetas, sep = " : ")
 	print("Press ENTER to continue ...")
@@ -179,8 +212,8 @@ def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
 	
 	run_count = 1
 	while True:
-		print("RUN COUNT", run_count)
-		print("* Learning Rate (α):", learning_rate) 
+		print("#%d" % run_count, "* Learning Rate (α):", learning_rate)
+		
 		master_history = [] # activation history run for the given theta
 		master_delta = [] # error history for the given theta
 
@@ -198,26 +231,36 @@ def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
 		
 		# delta accumilator matrix
 		CDelta = accumilate(make_theta(nodes_per, 0), master_history, master_delta, m)
-		CDelta_history.append(CDelta)
-		print("C_DEL AFTER RUN", CDelta, sep = "\n")
 		
 		# partial derivative matrix wrt induvidual theta
 		partial_D = make_partial(m, thetas, CDelta, lambd)
 		# print("PARTIAL", partial_D, sep = " : ")
 
-		partial_D = helper.nest_operate(-learning_rate, partial_D, operator.mul)
-		new_theta = helper.list_recur(thetas, partial_D, operator.sub)
-		thetas = new_theta
+		a_partial_D = helper.nest_operate(-learning_rate, partial_D, operator.mul)
+		new_theta = helper.list_recur(thetas, a_partial_D, operator.sub)
+		thetas = deepcopy(new_theta)
 		# print("Current theta (θ) : ", thetas, sep = " : ")
 		theta_history.append(thetas)
 
+		current_cost = J(theta_history[-1], dataset)
+		print("J(θ) :", current_cost)
+		J_history.append(current_cost)
+		
 		# break checks for various conditions
 		
-		# check for divergence
-		if len(CDelta_history) > 1 and helper.check_divergence(CDelta_history[-1], CDelta_history[-2]):
+		# # check for divergence
+		# if J_history[-1] > J_history[-2]:
+		# 	print("LATEST", J_history[-1])
+		# 	print("2nd", J_history[-2])
+		# 	flag = 1
+		# 	break
+		
+		# check whether the partial derivative calculated match for the given theta values
+		if not gradient_check(thetas, dataset, partial_D):
 			flag = 1
 			break
-		
+
+		# replace with gradient check
 		# check if thetas have converged
 		if helper.close_enough(theta_history[-1], theta_history[-2]):
 			flag = 0
@@ -237,18 +280,24 @@ def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
 	# finally return learnt thetas
 	return thetas
 
+
+# after learning of neural network, passing new parameters
 def query_y(thetas):
 	
 	# this is for taking input from the user
 	print("Enter the xi(s)", end = " : ")
 	xi_s = list(map(float, list(filter( lambda x: x != '', input().strip(' ').split(' ')))))
 	xi_s.insert(0,1)
-	print("XI_S", xi_s)
+	print("I/P (x) -> ", xi_s[1:])
+	
+	# generates output
 	y_matrix = FP(xi_s, thetas, singleton = True)
-	print(y_matrix)
+	print("O/P (y) -> ", y_matrix)
+
+	return y_matrix
 
 
-
+# main function to tie it all together
 def main():
 	try:
 		learning_rate = float(sys.argv[1])
@@ -299,6 +348,7 @@ def main():
 			cont = True
 
 
+# enable script access
 if __name__ == '__main__':
-	print("Neural Network dynamic implementation (v1.5)")
+	print("Neural Network dynamic implementation (v1.7)")
 	main()

@@ -39,8 +39,8 @@ def close_enough(new_theta, old_theta, tolerance = 0.000001):
 	return all(flatten(list_recur(new_theta, old_theta, lambda x, y : abs(x - y) < tolerance)))
 
 # this function checks for divergence of J(theta)
-def check_divergence(new_D, old_D):
-	return any(flatten(list_recur(new_D, old_D, lambda x, y : x < y)))
+# def check_divergence(new_J, old_D):
+# 	return any(flatten(list_recur(new_D, old_D, lambda x, y : x < y)))
 
 # this function elementwise operators
 def nest_operate(a, l, op = operator.add):
