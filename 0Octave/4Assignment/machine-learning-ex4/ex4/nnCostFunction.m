@@ -72,8 +72,7 @@ for i = 1:m
 	
 	% back prop to get gradient
 	delta_3 = active_3 - yi;
-	delta_2 = Theta2' * delta_3 .* sigmoidGradient(active_2);
-	delta_2 = delta_2(2:end);
+	delta_2 = Theta2(:, 2:end)' * delta_3 .* (active_2(2:end) .* (1 .- active_2(2:end)));
 	Theta1_grad += delta_2 * active_1';
 	Theta2_grad += delta_3 * active_2';
 
@@ -87,7 +86,9 @@ regular = sum(sum(Theta1(:, 2:end) .^ 2)) + sum(sum(Theta2(:, 2:end) .^ 2));
 regular *= (lambda / (2 * m));
 J += regular;
 Theta1_grad .*= (1 / m); 
+Theta1_grad += [zeros(size(Theta1), 1) (lambda / m) .* Theta1(:, 2:end)];
 Theta2_grad .*= (1 / m);
+Theta2_grad += [zeros(size(Theta2), 1) (lambda / m) .* Theta2(:, 2:end)];
 
 
 % -------------------------------------------------------------
