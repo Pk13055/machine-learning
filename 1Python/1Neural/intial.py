@@ -101,7 +101,7 @@ def BP(delta_L, thetas, nodes_pe, activation_history, L = 0):
 				p_sum += next_delta[i] * thetas[l][i][j]
 			
 			# element wise multiply of the theta' * x(i) .* a(l) * (1 - a(l))
-			# p_sum *= (activation_history[l][j] * (1 - activation_history[l][j]))
+			p_sum *= (activation_history[l][j] * (1 - activation_history[l][j]))
 			
 			current_delta.append(p_sum)
 			# print(current_delta[-1])
