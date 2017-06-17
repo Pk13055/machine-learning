@@ -101,7 +101,7 @@ def BP(delta_L, thetas, nodes_pe, activation_history, L = 0):
 				p_sum += next_delta[i] * thetas[l][i][j]
 			
 			# element wise multiply of the theta' * x(i) .* a(l) * (1 - a(l))
-			p_sum *= (activation_history[l][j] * (1 - activation_history[l][j]))
+			# p_sum *= (activation_history[l][j] * (1 - activation_history[l][j]))
 			
 			current_delta.append(p_sum)
 			# print(current_delta[-1])
@@ -159,7 +159,7 @@ def make_partial(m, thetas, CDeltas, lambd = 0):
 
 # for a given dataset, calculates 
 # - 1 / m sig(1..m) sig(1..k) y(k)log(h_theta)_k +  (1 - y(k))log(1 + (h_theta)_k)
-def J(thetas, dataset):
+def J(thetas, dataset, lambd = config.lambd):
 
 	from math import log
 	total_cost = 0
@@ -176,13 +176,25 @@ def J(thetas, dataset):
 			helper.nest_operate(1, helper.nest_operate(1, h_thetas, operator.sub), lambda x, y: log(y)))
 		current_cost = helper.list_recur(term1, term2)[0]
 		total_cost += current_cost
-	
+
 	total_cost *= (- 1 / len(dataset))
+	
+	# adding the regularization term
+	regular_cost = 0
+	for l in range(1, len(thetas)):
+		for i in range(1, len(thetas[l])):
+			for j in range(1, len(thetas[l][i])):
+				if j:
+					regular_cost += (thetas[l][i][j] ** 2)
+	regular_cost *= (lambd / (2 * len(dataset)))
+	
+	total_cost += regular_cost	
 	return total_cost
 
 # this function checks whether the predicted gradients are what they should be
 # by comparing with estimates
 def gradient_check(thetas, dataset, partial_D, epsilon = config.epsilon, tolerance = config.tolerance):
+	print("\nPerforming gradient check ...\n")
 	is_close = False
 	apx_PD = deepcopy(partial_D)
 	for l in range(1, len(thetas)):
@@ -191,25 +203,29 @@ def gradient_check(thetas, dataset, partial_D, epsilon = config.epsilon, toleran
 				temp_theta = [deepcopy(thetas), deepcopy(thetas)]
 				temp_theta[0][l][i][j] -= epsilon
 				temp_theta[1][l][i][j] += epsilon
-				slope =  (J(temp_theta[1], dataset) - J(temp_theta[0], dataset)) / (2 * epsilon)
-				apx_PD[l][i][j] = slope
+				apx_PD[l][i][j] = (J(temp_theta[1], dataset) - J(temp_theta[0], dataset)) \
+					/ (2 * epsilon)
+				
+	# for i, j in zip(partial_D, apx_PD):
+	# 	for k, l in zip(i, j):
+	# 		print(k, l, "\n", sep = "\n")
 
-	ans_matrix = helper.list_recur(apx_PD, partial_D, lambda x, y: abs(x - y) < tolerance)
-	print(helper.flatten(ans_matrix))
-	is_close = all(helper.flatten(ans_matrix))
+	ans_matrix = helper.flatten(helper.list_recur(apx_PD, partial_D, lambda x, y: abs(x - y) < tolerance))
+	is_close = ((ans_matrix.count(False) / len(ans_matrix)) * 100) < 20
 	return is_close
 
 
 # this function ties everything together and calculates the required theta for the given network
 def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
-	thetas = deepcopy(base_thetas)
-	theta_history = [ thetas ]
+	thetas = base_thetas
+	theta_history = [thetas]
 	J_history = [J(base_thetas, dataset)]	
+	grad_off = False
 	
 	print("Inita Theta (θ) : ", thetas, sep = " : ")
 	print("Press ENTER to continue ...")
 	input()
-	
+
 	run_count = 1
 	while True:
 		print("#%d" % run_count, "* Learning Rate (α):", learning_rate)
@@ -238,8 +254,7 @@ def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
 
 		a_partial_D = helper.nest_operate(-learning_rate, partial_D, operator.mul)
 		new_theta = helper.list_recur(thetas, a_partial_D, operator.sub)
-		thetas = deepcopy(new_theta)
-		# print("Current theta (θ) : ", thetas, sep = " : ")
+		thetas = new_theta
 		theta_history.append(thetas)
 
 		current_cost = J(theta_history[-1], dataset)
@@ -248,31 +263,41 @@ def learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L):
 		
 		# break checks for various conditions
 		
-		# # check for divergence
-		# if J_history[-1] > J_history[-2]:
-		# 	print("LATEST", J_history[-1])
-		# 	print("2nd", J_history[-2])
-		# 	flag = 1
-		# 	break
 		
 		# check whether the partial derivative calculated match for the given theta values
-		if not gradient_check(thetas, dataset, partial_D):
+		if (not grad_off) and (not gradient_check(thetas, dataset, partial_D)):
+			print("\nGradient check failed!\n")
 			flag = 1
 			break
+		else:
+			grad_off = True
 
 		# replace with gradient check
 		# check if thetas have converged
-		if helper.close_enough(theta_history[-1], theta_history[-2]):
+		if run_count > config.max_run_count:
+			print("RUNCOUNT OVERFLOW")
+			flag = 1
+			break
+
+		if J_history[-1] > J_history[-2]:
+			print("J DIVERGE")
+			flag = 1
+			break
+		
+		if helper.close_enought(theta_history[-1], theta_history[-2]):
 			flag = 0
 			break
 		
-	
+		if run_count > config.min_run_count and helper.close_enough(J_history[-1], J_history[-2]):
+			learning_rate += (0.05 * learning_rate)
+
+
 		run_count += 1
 
 	if flag:
-		print("THETAS HAVE DIVERGED")
+		print("THETAS MAY HAVE DIVERGED, results may not be accurate")
 		# escape function to be removed after dynamic learning rate adjustment
-		return helper.nest_operate(0, base_thetas, operator.mul)
+		# return helper.nest_operate(0, base_thetas, operator.mul)
 	else:
 		print("\nThetas have been 'learnt' successfully\n")
 		print("Final theta (θ) set : ", theta_history[-1], "\n")
@@ -339,7 +364,6 @@ def main():
 	final_theta = learn_theta(dataset, learning_rate, lambd, m, nodes_per, base_thetas, L)
 	
 	cont = True
-
 	while cont:
 		query_y(final_theta)
 		print("Calculate another (Y/n) : ", end = "")

@@ -4,7 +4,7 @@
 
 '''
 import operator
-
+import config
 # sanitize list, tuple etc on the basis on l10 given value
 def sanitize(data, value = ''):
 	return type(data)(filter(lambda x: x != value, data))
@@ -13,8 +13,9 @@ def sanitize(data, value = ''):
 # return an empty matrix of dimension m x n intialized to x
 def matrix(m, n, x = []):
 	if x == []:
-		from random import random as r
-		return [[0 for x in range(n)] if i == 0 else [r() for _ in range(n)] for i in range(m)]
+		from random import uniform as r
+		return [[0 for x in range(n)] if i == 0 else \
+		[r(-config.epsilon, config.epsilon) for _ in range(n)] for i in range(m)]
 	return [[0 for x in range(n)] if i == 0 else [x for _ in range(n)] for i in range(m)]
 
 # flatten the theta list for easy summation of squares
@@ -35,8 +36,13 @@ def list_recur(l1, l2, op = operator.add):
 		return type(l1)([op(l1[0], l2[0])]) + list_recur(l1[1:], l2[1:], op)
 
 # checks for closeness, convergence of theta values
-def close_enough(new_theta, old_theta, tolerance = 0.000001):
-	return all(flatten(list_recur(new_theta, old_theta, lambda x, y : abs(x - y) < tolerance)))
+def close_enought(new_theta, old_theta, tolerance = 0.000000001):
+	return all(flatten(list_recur(new_theta, old_theta, lambda x, y : \
+		((abs(x - y) / abs(y) * 100) if y else 0)  < tolerance)))
+
+# checks for J decrement
+def close_enough(new_J, old_J, tolerance = 0.0001):
+	return new_J < old_J and (abs(new_J - old_J) / abs(old_J) * 100) < tolerance
 
 # this function checks for divergence of J(theta)
 # def check_divergence(new_J, old_D):

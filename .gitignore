@@ -103,3 +103,4 @@ ENV/
 # Misc files
 Datasets/
 backup.py
+4Documentation/
