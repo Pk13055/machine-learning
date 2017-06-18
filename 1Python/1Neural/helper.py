@@ -9,9 +9,12 @@ import config
 def sanitize(data, value = ''):
 	return type(data)(filter(lambda x: x != value, data))
 
+# unpacks dict values into a tuple
+def unpack(dict_here):
+	return tuple([dict_here[x] for x in dict_here])
 
 # return an empty matrix of dimension m x n intialized to x
-def matrix(m, n, x = []):
+def matrix(m, n, x = [], epsilon = 0):
 	if x == []:
 		from random import uniform as r
 		return [[0 for x in range(n)] if i == 0 else \
