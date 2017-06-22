@@ -103,6 +103,12 @@ def h(thetas, xi_s):
 	p_sum = sum([i * j for i, j in zip(thetas, xi_s)])
 	return 1 / (1 + e ** -p_sum)
 
+def print_thetas(thetas):
+	theta_count = 1
+	for theta in thetas[1:]:
+		print("Θ%d Matrix : " % theta_count, theta, sep = "\n")
+		theta_count += 1
+
 # defined for making own operators
 class Infix:
     def __init__(self, function):
