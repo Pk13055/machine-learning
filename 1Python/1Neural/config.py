@@ -14,11 +14,16 @@ lambd = 0
 normal_file = "normal_text.txt"
 
 # tolerance
-tolerance = 1e-4
+tolerance = 1e-8
+
+
+theta_tolerance = 1e-8
+J_tolerance = 1e-4
+J_max = 1e30
 
 # epsilon value
 epsilon = 1e-4
 
-max_run_count = 100000
 
+max_run_count = 10000
 min_run_count = 1000

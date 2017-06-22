@@ -12,15 +12,15 @@
 # default imports
 import numpy as np
 import helper
+import np_helper
 import config
 
 # specific imports
 import sys
 import operator
-from copy import deepcopy
-from math import sqrt, e
+from math import sqrt, e, inf
+from time import sleep
 
-r6 = sqrt(6)
 
 # this creates a function that can be applied to matrices element wise
 def sigmoid(z):
@@ -37,6 +37,7 @@ def design_thetas(nodes):
 		# 'empty_DIJ' : []
 	}
 
+	r6 = sqrt(6)
 	# initializing empty theta and DIJ
 	thetas = [np.array([0])]
 	# empty_DIJ = [np.array([0])]
@@ -67,7 +68,7 @@ def calc_gradient(thetas, raw_data, lambd = 0):
 
 	# copying the dataset to prevent change
 	# initalizing useful params
-	dataset = deepcopy(raw_data)
+	dataset = raw_data
 	Dij = []
 	is_empty = True
 	cost = 0
@@ -187,15 +188,17 @@ def calc_gradient(thetas, raw_data, lambd = 0):
 def learn_thetas(initial_thetas, dataset, learning_rate, lambd):
 
 	theta_history = [initial_thetas] # stores the history of thetas for convergence check
-	current_thetas = deepcopy(initial_thetas) # thetas used during every iteration
+	J_history = [inf]
+	current_thetas = initial_thetas # thetas used during every iteration
 	run_count = 0 # keeps track of the iterations 
-	
+	no_error = True
+
 	return_obj = {
-		"learnt_thetas" : [],
-		"thetas" : [],
-		"run_count" : 0,
-		"learning_rate" : 0,
-		"regularization_param" : 0
+		# "learnt_thetas" : [],
+		"thetas" : []
+		# "run_count" : 0,
+		# "learning_rate" : 0,
+		# "regularization_param" : 0
 	}
 
 	# infinite loop which will be broken by certain divergence and convergence checks
@@ -203,33 +206,79 @@ def learn_thetas(initial_thetas, dataset, learning_rate, lambd):
 		
 		# partial derivative are calculated as gradients (with regularization) and returned here
 		partial_D, lambd, cost = calc_gradient(current_thetas, dataset, lambd)
-
+		J_history.append(cost)
+		
 		# theta* = theta - alpha * partial_d
 		partial_D = [ -learning_rate * x for x in partial_D]
-		new_thetas = [ np.matrix(a) + b for a, b in zip(current_thetas[1:], partial_D)]
+		new_thetas = [np.matrix([0])] + [ np.matrix(a) + b for a, b in zip(current_thetas[1:], partial_D)]
+		theta_history.append(new_thetas)
+		
 		print("#%d : " % run_count, "L(α) :", learning_rate, "J(Θ) :", cost)
-		helper.print_thetas(new_thetas)
+		# helper.print_thetas(new_thetas)
+		
+		# divergence / convergence conditions
 
-		current_thetas = [np.matrix([])] + new_thetas
-		theta_history.append(current_thetas)
+		# cost is way too high
+		if J_history[-1] > config.J_max:
+			print("J Divergence")
+			no_error = False
+			break
+		
+		# Cost increased
+		elif J_history[-1] > J_history[-2]:
+			print("\nJ divergence\n")
+			print("New learning rate (α) : ", learning_rate)
+			sleep(1)
+			learning_rate /= 3
+			# break
+
+		# cost is almost constant
+		elif abs(J_history[-1] - J_history[-2]) / abs(J_history[-1]) < config.tolerance:			
+			no_error = True
+			break
+		
+		# J is decreasing too slowly
+		elif run_count > config.min_run_count and \
+			abs(J_history[-1] - J_history[-2]) < config.J_tolerance:
+			learning_rate *= 1.05
+
+		# thetas converged
+		if run_count > config.max_run_count / 2:
+			theta_history = theta_history[len(theta_history) / 2 :]
+			if np_helper.close_theta(theta_history[-1], theta_history[-2], config.theta_tolerance):
+				print("\nTheta Convergence!\n")
+				no_error = True
+				break
+
+		# overflowed the run count
+		if run_count > config.max_run_count:
+			print("\nRun overflow\n")
+			no_error = False
+			break
+
+		# readying for next iteration
+		current_thetas = new_thetas
 		run_count += 1
 
 	# fill in details and return
 	return_obj['thetas'] = theta_history
-	return_obj['learn_thetas'] = theta_history[-1]
-	return_obj['run_count'] = run_count  
-	return_obj['learning_rate'] = learning_rate
-	return_obj['regularization_param'] = lambd
-	return helper.unpack(return_obj)
+	print("\n Final Thetaset -> ", theta_history[-1][1:], "\n")
+	# return_obj['learn_thetas'] = theta_history[-1]
+	# return_obj['run_count'] = run_count  
+	# return_obj['learning_rate'] = learning_rate
+	# return_obj['regularization_param'] = lambd
+	return theta_history
+	# return helper.unpack(return_obj)
 
 
-# after learning of neural network, passing new parameters
+# after learning of params, passing new parameters
 def query_y(thetas):
-
+	
 	# this is for taking input from the user
 	print("Enter the xi(s)", end = " : ")
 	xi_s = list(map(float, list(filter( lambda x: x != '', input().strip(' ').split(' ')))))
 	xi_s.insert(0,1)
+	valid_input = True
 	print("I/P (x) -> ", xi_s[1:])
 	
 	# generates output
@@ -244,7 +293,11 @@ def query_y(thetas):
 	for theta_L in thetas[1:]:
 		
 		# creating raw non-activated
-		current_raw = theta_L.dot(current_activation)
+		try:
+			current_raw = theta_L.dot(current_activation)
+		except:
+			valid_input = False
+			break
 		
 		# sigmoiding the previous output prior to adding one
 		current_activated = sigmoid(current_raw)
@@ -256,7 +309,11 @@ def query_y(thetas):
 		# for the next iteration after adding bias unit
 		current_activation = next_layer
 
-	y_matrix = activation_layers[-1]
+	if valid_input:
+		y_matrix = activation_layers[-1][1:]
+	else:
+		y_matrix = ["Invalid Input"]
+	
 	print("O/P (y) -> ", y_matrix)
 	return y_matrix
 
@@ -295,16 +352,20 @@ def main():
 		nodes_per.append(int(input()))
 	
 	m, dataset, statistics = helper.process_data(data_file, normal_file, k)
+	print(dataset)
+	input()
 	nodes_per.append(k)
 	nodes_per.insert(0, len(dataset[0][0])) # the number of inputs
 	L, nodes_per, inital_thetas = design_thetas(nodes_per)
 
-	learnt_thetas, theta_history, total_runs, final_rate, regular_param \
-	= learn_thetas(inital_thetas, dataset, learning_rate, lambd)
+	# final_thetas, theta_history, total_runs, final_rate, regular_param \
+	# = learn_thetas(inital_thetas, dataset, learning_rate, lambd)
+	theta_history = learn_thetas(inital_thetas, dataset, learning_rate, lambd)
+	final_thetas = theta_history[-1]
 
 	cont = True
 	while cont:
-		query_y(final_theta)
+		query_y(final_thetas)
 		print("Calculate another (Y/n) : ", end = "")
 		ans, cont = str(input()), False
 		if ans == "" or ans[0] == "" or ans[0] == "y":
