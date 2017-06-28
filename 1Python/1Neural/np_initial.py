@@ -192,7 +192,8 @@ def learn_thetas(initial_thetas, dataset, learning_rate, lambd):
 	current_thetas = initial_thetas # thetas used during every iteration
 	run_count = 0 # keeps track of the iterations 
 	no_error = True
-
+	not_reset = True
+	
 	return_obj = {
 		# "learnt_thetas" : [],
 		"thetas" : []
@@ -244,7 +245,9 @@ def learn_thetas(initial_thetas, dataset, learning_rate, lambd):
 
 		# thetas converged
 		if run_count > config.max_run_count / 2:
-			theta_history = theta_history[len(theta_history) / 2 :]
+			if not_reset:
+				theta_history = theta_history[len(theta_history) / 2 :]
+				not_reset = False
 			if np_helper.close_theta(theta_history[-1], theta_history[-2], config.theta_tolerance):
 				print("\nTheta Convergence!\n")
 				no_error = True
