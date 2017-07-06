@@ -73,6 +73,11 @@ def main():
 	except:
 		K = 2
 	
+	if K > m:
+		print("Number of clusters cannot be greater than number of \
+			training examples. Exiting")
+		return False
+
 	raw_data, centroids = create_data(m, n, K) # pythonic dataset
 	
 	# delete the file if it exists
