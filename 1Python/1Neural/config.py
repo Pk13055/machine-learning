@@ -18,9 +18,9 @@ tolerance = 1e-8
 
 
 theta_tolerance = 1e-8
-J_tolerance = 1e-4
+J_tolerance = 1e-6
 J_max = 1e30
-
+J_break = 1e-9
 # epsilon value
 epsilon = 1e-4
 

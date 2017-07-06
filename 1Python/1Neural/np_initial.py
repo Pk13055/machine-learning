@@ -233,15 +233,14 @@ def learn_thetas(initial_thetas, dataset, learning_rate, lambd):
 			learning_rate /= 3
 			# break
 
-		# cost is almost constant
-		elif abs(J_history[-1] - J_history[-2]) / abs(J_history[-1]) < config.tolerance:			
-			no_error = True
-			break
-		
 		# J is decreasing too slowly
 		elif run_count > config.min_run_count and \
-			abs(J_history[-1] - J_history[-2]) < config.J_tolerance:
+			(abs(J_history[-1] - J_history[-2]) * 100 / J_history[-1]) < config.J_tolerance:
 			learning_rate *= 1.05
+			if abs(J_history[-1] - J_history[-2]) < config.J_break:
+				no_error = False
+				break
+
 
 		# thetas converged
 		if run_count > config.max_run_count / 2:
