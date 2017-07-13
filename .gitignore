@@ -103,5 +103,6 @@ ENV/
 # Misc files
 Datasets/
 backup.py
-4Documentation/
+3Documentation/
 Image_Data/
+*.zip
