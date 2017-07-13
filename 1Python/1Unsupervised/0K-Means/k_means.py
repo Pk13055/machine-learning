@@ -223,14 +223,16 @@ def find_centroids(dataset, K_list):
 	return across_K_centroid[min_ind] #, across_K_cluster[min_ind]
 
 
+# find the closest cluster head to a given example
+# returns the index
+def closest_to(xi_s, centroids):
+	closeness = [sqrt(sum([(xi - ci) ** 2 for xi, ci in \
+		zip(xi_s, cent)])) for cent in centroids]
+	return closeness.index(min(closeness))
+
 # once calculated to find new closeness or cluster group
 def query_y(centroids):
 
-	# find the closest cluster head to a given example
-	def closest_to(xi_s, centroids):
-		closeness = [sqrt(sum([(xi - ci) ** 2 for xi, ci in \
-			zip(xi_s, cent)])) for cent in centroids]
-		return closeness.index(min(closeness)) + 1
 	
 	# this is for taking input from the user
 	print("Enter the xi(s)", end = " : ")
@@ -239,7 +241,7 @@ def query_y(centroids):
 		if len(xi_s) != len(centroids[0]):
 			raise Exception
 		print("I/P (x) -> ", xi_s)
-		cluster = closest_to(xi_s, centroids)
+		cluster = closest_to(xi_s, centroids) + 1
 		print("Belongs to cluster %d" % (cluster))
 		return cluster
 	
