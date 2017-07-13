@@ -30,7 +30,7 @@ error_summary = [];
 
 for i = 1:length(C_vals)
 	for j = 1:length(sigma_vals)
-		model= svmTrain(Xval, yval, C_vals(i), @(x1, x2) gaussianKernel(x1, x2, sigma_vals(j))); 
+		model= svmTrain(X, y, C_vals(i), @(x1, x2) gaussianKernel(x1, x2, sigma_vals(j))); 
 		predictions = svmPredict(model, Xval);
 		error_summary = [error_summary; mean(double(predictions ~= yval)), C_vals(i), sigma_vals(j)];
 	end
