@@ -73,8 +73,11 @@ def plotGraph(grouping, final_c):
 def init_centroids(dataset, K):
 	ind_range = range(len(dataset))
 	indices = 2 * [ind_range]
-	while len(indices) != len(set(indices)):
-		indices = [random.choice(ind_range) for _ in range(K)]
+	if K < len(dataset) / 2:
+		while len(indices) != len(set(indices)):
+			indices = [random.choice(ind_range) for _ in range(K)]
+	else:
+		indices = [i for i in range(K)]
 
 	# return the formulated centroids
 	return [dataset[_] for _ in indices]
@@ -99,7 +102,7 @@ def J(closest, xi_s, centroids):
 	return cost
 
 # this functions applies K-means to find the centoids
-def find_centroids(dataset, K_list):
+def find_centroids(dataset, K_list, is_graph = is_graph):
 
 	m = len(dataset)
 	n = len(dataset[0])
