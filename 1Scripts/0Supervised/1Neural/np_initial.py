@@ -18,13 +18,13 @@ import config
 # specific imports
 import sys
 import operator
-from math import sqrt, e, inf
+from math import sqrt, e, inf, exp
 from time import sleep
 
 
 # this creates a function that can be applied to matrices element wise
 def sigmoid(z):
-	return 1 / (1 + e ** -z)
+	return 1 / (1 + exp(-z))
 sigmoid = np.vectorize(sigmoid)
 
 # initializes the thetas 'less' randomly
