@@ -38,3 +38,11 @@
 	- Program crunches for a while following which you get a prompt: This is the success case, you can query for cases
 	- Program runs into a [nan, nan, ...] print cycle: This means your learning rate is far too large. Use a smaller learning rate and, if possible, use normalized data
 	- Program proceeds with [float, float ..] value printing: Program is crunching, give it time
+
+## Folder Tree
+.
+ * [config.py](./config.py)
+ * [dataset_gen.py](./dataset_gen.py)
+ * [grad-descent.py](./grad-descent.py)
+ * [normalization.py](./normalization.py)
+ * [RUN.md](./RUN.md)
