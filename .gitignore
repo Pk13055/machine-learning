@@ -105,4 +105,5 @@ Datasets/
 backup.py
 3Documentation/
 Image_Data/
-*.zip
+*.zipi
+2Production/
