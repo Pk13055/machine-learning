@@ -1,7 +1,0 @@
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/install.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/list_install_components.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/rebuild_cache.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/armadillo.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/install/strip.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/install/local.dir
-/home/pratik/0Coding/93Machine-Learning/2C++/armadillo-7.950.1/CMakeFiles/edit_cache.dir

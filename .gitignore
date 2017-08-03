@@ -107,3 +107,4 @@ backup.py
 Image_Data/
 *.zipi
 2Production/
+armadillo*
