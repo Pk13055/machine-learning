@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/pratik/0Coding/93Machine-Learning/4Chat-Bot/tflearn_chatbot/trained_model"
+all_model_checkpoint_paths: "/home/pratik/0Coding/93Machine-Learning/4Chat-Bot/tflearn_chatbot/trained_model"
