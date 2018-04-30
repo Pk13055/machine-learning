@@ -1,0 +1,3 @@
+[submodule "cs231n-notes"]
+	path = cs231n-notes
+	url = git@github.com:Pk13055/cs231n-notes.git
